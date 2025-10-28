@@ -1,0 +1,9 @@
+streamlit
+sqlalchemy
+bcrypt
+pandas
+plotly
+reportlab
+scikit-learn
+pillow
+requests
