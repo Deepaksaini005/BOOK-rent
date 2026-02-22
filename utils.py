@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from io import BytesIO
 import os
 
 def get_session():
@@ -78,18 +79,32 @@ def calculate_late_fee(rental):
     return 0.0
 
 def generate_invoice(rental):
+    """Generate invoice PDF and return filename (for backward compatibility)."""
     filename = f"invoice_{rental.id}.pdf"
     c = canvas.Canvas(filename, pagesize=letter)
+    _draw_invoice_content(c, rental)
+    c.save()
+    return filename
+
+def _draw_invoice_content(c, rental):
     c.drawString(100, 750, f"Invoice for Rental ID: {rental.id}")
     c.drawString(100, 730, f"User: {rental.user.name}")
     c.drawString(100, 710, f"Book: {rental.book.title}")
     c.drawString(100, 690, f"Rent Date: {rental.rent_date.strftime('%Y-%m-%d')}")
     c.drawString(100, 670, f"Due Date: {rental.due_date.strftime('%Y-%m-%d')}")
-    c.drawString(100, 650, f"Total Amount: ${rental.total_amount}")
-    if rental.late_fee > 0:
-        c.drawString(100, 630, f"Late Fee: ${rental.late_fee}")
+    c.drawString(100, 650, f"Total Amount: ${rental.total_amount:.2f}")
+    if rental.late_fee and rental.late_fee > 0:
+        c.drawString(100, 630, f"Late Fee: ${rental.late_fee:.2f}")
+    c.drawString(100, 590, "Thank you for using Book Rental App!")
+
+def generate_invoice_bytes(rental):
+    """Generate invoice PDF and return as bytes for download."""
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    _draw_invoice_content(c, rental)
     c.save()
-    return filename
+    buffer.seek(0)
+    return buffer.getvalue()
 
 def get_recommendations(user_id, session):
     # Simple recommendation based on user's past rentals

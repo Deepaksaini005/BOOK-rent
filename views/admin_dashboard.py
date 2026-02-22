@@ -49,28 +49,34 @@ def show():
                 st.rerun()
 
     # Edit book form
-    if 'edit_book' in st.session_state:
+    if "edit_book" in st.session_state:
         book = st.session_state.edit_book
-        st.subheader(f"Edit Book: {book.title}")
-        with st.form("edit_book_form"):
-            title = st.text_input("Title", book.title)
-            author = st.text_input("Author", book.author)
-            genre = st.text_input("Genre", book.genre)
-            price = st.number_input("Price per day", min_value=0.0, value=book.price_per_day)
-            stock = st.number_input("Stock", min_value=1, value=book.stock)
-            description = st.text_area("Description", book.description or "")
-            if st.form_submit_button("Update Book"):
-                book.title = title
-                book.author = author
-                book.genre = genre
-                book.price_per_day = price
-                book.stock = stock
-                book.available = min(book.available, stock)  # Adjust available if stock decreased
-                book.description = description
-                session.commit()
-                st.success("Book updated!")
-                del st.session_state.edit_book
-                st.rerun()
+        # Re-attach to current session for update
+        db_book = session.query(Book).filter_by(id=book.id).first()
+        if not db_book:
+            del st.session_state.edit_book
+            st.rerun()
+        else:
+            st.subheader(f"Edit Book: {db_book.title}")
+            with st.form("edit_book_form"):
+                title = st.text_input("Title", db_book.title)
+                author = st.text_input("Author", db_book.author)
+                genre = st.text_input("Genre", db_book.genre or "")
+                price = st.number_input("Price per day", min_value=0.0, value=float(db_book.price_per_day))
+                stock = st.number_input("Stock", min_value=1, value=db_book.stock)
+                description = st.text_area("Description", db_book.description or "")
+                if st.form_submit_button("Update Book"):
+                    db_book.title = title
+                    db_book.author = author
+                    db_book.genre = genre
+                    db_book.price_per_day = price
+                    db_book.stock = stock
+                    db_book.available = min(db_book.available, stock)
+                    db_book.description = description
+                    session.commit()
+                    st.success("Book updated!")
+                    del st.session_state.edit_book
+                    st.rerun()
 
     # List books
     books = session.query(Book).all()
@@ -86,10 +92,14 @@ def show():
                 st.rerun()
         with col4:
             if st.button("Delete", key=f"delete_{book.id}"):
-                session.delete(book)
-                session.commit()
-                st.success("Book deleted!")
-                st.rerun()
+                try:
+                    session.delete(book)
+                    session.commit()
+                    st.success("Book deleted!")
+                    st.rerun()
+                except Exception as e:
+                    session.rollback()
+                    st.error("Cannot delete: book has rentals, reviews, or wishlist entries. Remove them first.")
 
     # Manage Users
     st.subheader("👥 Manage Users")

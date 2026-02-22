@@ -34,17 +34,22 @@ def show():
         st.write("You haven't written any reviews yet")
 
     # Edit review form
-    if 'edit_review' in st.session_state:
+    if "edit_review" in st.session_state:
         review = st.session_state.edit_review
-        st.subheader(f"Edit Review for {review.book.title}")
-        rating = st.slider("Rating", 1, 5, review.rating)
-        comment = st.text_area("Comment", review.comment)
-        if st.button("Update Review"):
-            review.rating = rating
-            review.comment = comment
-            session.commit()
-            st.success("Review updated!")
+        db_review = session.query(Review).filter_by(id=review.id).first()
+        if not db_review:
             del st.session_state.edit_review
             st.rerun()
+        else:
+            st.subheader(f"Edit Review for {db_review.book.title}")
+            rating = st.slider("Rating", 1, 5, db_review.rating)
+            comment = st.text_area("Comment", db_review.comment or "")
+            if st.button("Update Review"):
+                db_review.rating = rating
+                db_review.comment = comment
+                session.commit()
+                st.success("Review updated!")
+                del st.session_state.edit_review
+                st.rerun()
 
     session.close()

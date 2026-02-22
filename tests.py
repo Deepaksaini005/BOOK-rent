@@ -1,17 +1,15 @@
 import unittest
 from utils import calculate_rent_amount, calculate_late_fee, get_recommendations
-from models import User, Book, Rental
-from datetime import datetime, timedelta
+from models import Base, User, Book, Rental
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 class TestBookRentalApp(unittest.TestCase):
     def setUp(self):
         # Create in-memory database for testing
-        self.engine = create_engine('sqlite:///:memory:')
-        User.metadata.create_all(self.engine)
-        Book.metadata.create_all(self.engine)
-        Rental.metadata.create_all(self.engine)
+        self.engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(self.engine)
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
 
@@ -32,25 +30,27 @@ class TestBookRentalApp(unittest.TestCase):
         self.assertEqual(amount, 35.0)
 
     def test_calculate_late_fee_no_late(self):
+        now = datetime.now(timezone.utc)
         rental = Rental(
             user_id=self.user.id,
             book_id=self.book.id,
-            rent_date=datetime.utcnow() - timedelta(days=5),
-            due_date=datetime.utcnow() + timedelta(days=2),
-            return_date=datetime.utcnow(),
-            total_amount=25.0
+            rent_date=now - timedelta(days=5),
+            due_date=now + timedelta(days=2),
+            return_date=now,
+            total_amount=25.0,
         )
         fee = calculate_late_fee(rental)
         self.assertEqual(fee, 0.0)
 
     def test_calculate_late_fee_with_late(self):
+        now = datetime.now(timezone.utc)
         rental = Rental(
             user_id=self.user.id,
             book_id=self.book.id,
-            rent_date=datetime.utcnow() - timedelta(days=10),
-            due_date=datetime.utcnow() - timedelta(days=2),
-            return_date=datetime.utcnow(),
-            total_amount=50.0
+            rent_date=now - timedelta(days=10),
+            due_date=now - timedelta(days=2),
+            return_date=now,
+            total_amount=50.0,
         )
         fee = calculate_late_fee(rental)
         self.assertEqual(fee, 10.0)  # 2 days late * $5/day
@@ -60,13 +60,13 @@ class TestBookRentalApp(unittest.TestCase):
         self.assertFalse(self.user.check_password("wrongpassword"))
 
     def test_get_recommendations(self):
-        # Add a rental for the user
+        now = datetime.now(timezone.utc)
         rental = Rental(
             user_id=self.user.id,
             book_id=self.book.id,
-            rent_date=datetime.utcnow(),
-            due_date=datetime.utcnow() + timedelta(days=7),
-            total_amount=35.0
+            rent_date=now,
+            due_date=now + timedelta(days=7),
+            total_amount=35.0,
         )
         self.session.add(rental)
         self.session.commit()

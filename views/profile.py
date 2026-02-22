@@ -19,11 +19,14 @@ def show():
         phone = st.text_input("Phone", user.phone or "")
 
         if st.form_submit_button("Update Profile"):
-            user.name = name
-            user.email = email
-            user.address = address
-            user.phone = phone
-            session.commit()
+            db_user = session.query(User).filter_by(id=user.id).first()
+            if db_user:
+                db_user.name = name
+                db_user.email = email
+                db_user.address = address
+                db_user.phone = phone
+                session.commit()
+                st.session_state.user = db_user
             st.success("Profile updated!")
             st.rerun()
 
@@ -34,11 +37,18 @@ def show():
         confirm_password = st.text_input("Confirm New Password", type="password")
 
         if st.form_submit_button("Change Password"):
-            if user.check_password(current_password):
+            db_user = session.query(User).filter_by(id=user.id).first()
+            if not db_user:
+                st.error("Session expired. Please login again.")
+            elif db_user.check_password(current_password):
                 if new_password == confirm_password:
-                    user.set_password(new_password)
-                    session.commit()
-                    st.success("Password changed!")
+                    if len(new_password) < 6:
+                        st.error("New password must be at least 6 characters")
+                    else:
+                        db_user.set_password(new_password)
+                        session.commit()
+                        st.session_state.user = db_user
+                        st.success("Password changed!")
                 else:
                     st.error("New passwords do not match")
             else:
