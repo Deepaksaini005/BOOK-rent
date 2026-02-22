@@ -17,7 +17,7 @@ def show():
     if reviews:
         for review in reviews:
             with st.expander(f"{review.book.title} - {review.rating}/5"):
-                st.write(f"**Comment:** {review.comment}")
+                st.write(f"**Comment:** {review.comment or '(No comment)'}")
                 st.write(f"**Date:** {review.created_at.strftime('%Y-%m-%d')}")
                 col1, col2 = st.columns(2)
                 with col1:
@@ -26,10 +26,14 @@ def show():
                         st.rerun()
                 with col2:
                     if st.button("Delete Review", key=f"delete_{review.id}"):
-                        session.delete(review)
-                        session.commit()
-                        st.success("Review deleted!")
-                        st.rerun()
+                        try:
+                            session.delete(review)
+                            session.commit()
+                            st.success("Review deleted!")
+                            st.rerun()
+                        except Exception as e:
+                            session.rollback()
+                            st.error(f"Could not delete: {str(e)}")
     else:
         st.write("You haven't written any reviews yet")
 
@@ -45,11 +49,15 @@ def show():
             rating = st.slider("Rating", 1, 5, db_review.rating)
             comment = st.text_area("Comment", db_review.comment or "")
             if st.button("Update Review"):
-                db_review.rating = rating
-                db_review.comment = comment
-                session.commit()
-                st.success("Review updated!")
-                del st.session_state.edit_review
-                st.rerun()
+                try:
+                    db_review.rating = rating
+                    db_review.comment = (comment or "").strip() or None
+                    session.commit()
+                    st.success("Review updated!")
+                    del st.session_state.edit_review
+                    st.rerun()
+                except Exception as e:
+                    session.rollback()
+                    st.error(f"Could not update: {str(e)}")
 
     session.close()

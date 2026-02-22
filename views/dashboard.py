@@ -27,13 +27,17 @@ def show():
                     st.write(f"Due: **{rental.due_date.strftime('%Y-%m-%d')}**")
                 with col3:
                     if st.button("Return Book", key=f"return_{rental.id}"):
-                        rental.return_date = datetime.now(timezone.utc)
-                        rental.status = "returned"
-                        rental.late_fee = calculate_late_fee(rental)
-                        rental.book.available += 1
-                        session.commit()
-                        st.success("Book returned!")
-                        st.rerun()
+                        try:
+                            rental.return_date = datetime.now(timezone.utc)
+                            rental.status = "returned"
+                            rental.late_fee = calculate_late_fee(rental)
+                            rental.book.available += 1
+                            session.commit()
+                            st.success("Book returned!")
+                            st.rerun()
+                        except Exception as e:
+                            session.rollback()
+                            st.error(f"Could not return book: {str(e)}")
                 st.divider()
     else:
         st.info("No active rentals. Head to Search Books to rent one.")

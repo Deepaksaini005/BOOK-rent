@@ -32,21 +32,38 @@ def show():
     st.subheader("📚 Manage Books")
     if st.button("Add New Book"):
         st.session_state.add_book = True
-    if 'add_book' in st.session_state and st.session_state.add_book:
+    if "add_book" in st.session_state and st.session_state.add_book:
         with st.form("add_book_form"):
-            title = st.text_input("Title")
-            author = st.text_input("Author")
-            genre = st.text_input("Genre")
-            price = st.number_input("Price per day", min_value=0.0)
-            stock = st.number_input("Stock", min_value=1)
-            description = st.text_area("Description")
+            title = st.text_input("Title *", placeholder="Book title")
+            author = st.text_input("Author *", placeholder="Author name")
+            genre = st.text_input("Genre", placeholder="e.g. Novel, Fiction")
+            price = st.number_input("Price per day ($)", min_value=0.0, value=3.0, step=0.5)
+            stock = st.number_input("Stock", min_value=1, value=1)
+            description = st.text_area("Description", placeholder="Short description")
             if st.form_submit_button("Add Book"):
-                book = Book(title=title, author=author, genre=genre, price_per_day=price, stock=stock, available=stock, description=description)
-                session.add(book)
-                session.commit()
-                st.success("Book added!")
-                st.session_state.add_book = False
-                st.rerun()
+                t = (title or "").strip()
+                a = (author or "").strip()
+                if not t or not a:
+                    st.error("Title and Author are required.")
+                else:
+                    try:
+                        book = Book(
+                            title=t,
+                            author=a,
+                            genre=(genre or "").strip() or None,
+                            price_per_day=price,
+                            stock=stock,
+                            available=stock,
+                            description=(description or "").strip() or None,
+                        )
+                        session.add(book)
+                        session.commit()
+                        st.success("Book added!")
+                        st.session_state.add_book = False
+                        st.rerun()
+                    except Exception as e:
+                        session.rollback()
+                        st.error(f"Could not add book: {str(e)}")
 
     # Edit book form
     if "edit_book" in st.session_state:

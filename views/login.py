@@ -24,14 +24,15 @@ def show():
 
             try:
                 session = get_session()
-                user = session.query(User).filter_by(email=email).first()
-                if user and user.check_password(password):
-                    st.session_state.user = user
-                    st.success("Login successful! Welcome back.")
+                try:
+                    user = session.query(User).filter_by(email=email).first()
+                    if user and user.check_password(password):
+                        st.session_state.user = user
+                        st.success("Login successful! Welcome back.")
+                        st.rerun()
+                    else:
+                        st.error("Invalid email or password.")
+                finally:
                     session.close()
-                    st.rerun()
-                else:
-                    st.error("Invalid email or password.")
-                session.close()
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")

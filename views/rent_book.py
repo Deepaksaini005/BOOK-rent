@@ -23,6 +23,8 @@ def show():
     user = st.session_state.user
 
     if st.button("← Back"):
+        if "selected_book" in st.session_state:
+            del st.session_state.selected_book
         st.rerun()
 
     st.title(f"📅 Rent: {book.title}")

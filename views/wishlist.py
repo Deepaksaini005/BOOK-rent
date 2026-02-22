@@ -31,10 +31,14 @@ def show():
                         st.rerun()
                 with col2:
                     if st.button("Remove", key=f"remove_wish_{wishlist_item.id}"):
-                        session.delete(wishlist_item)
-                        session.commit()
-                        st.success("Removed!")
-                        st.rerun()
+                        try:
+                            session.delete(wishlist_item)
+                            session.commit()
+                            st.success("Removed!")
+                            st.rerun()
+                        except Exception as e:
+                            session.rollback()
+                            st.error(f"Could not remove: {str(e)}")
     else:
         st.info("Your wishlist is empty. Add books from Search to get started.")
 

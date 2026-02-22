@@ -59,10 +59,14 @@ def show():
                             st.caption("✓ In wishlist")
                         else:
                             if st.button("❤️ Wishlist", key=f"wishlist_{book.id}"):
-                                session.add(Wishlist(user_id=st.session_state.user.id, book_id=book.id))
-                                session.commit()
-                                st.success("Added to wishlist!")
-                                st.rerun()
+                                try:
+                                    session.add(Wishlist(user_id=st.session_state.user.id, book_id=book.id))
+                                    session.commit()
+                                    st.success("Added to wishlist!")
+                                    st.rerun()
+                                except Exception as e:
+                                    session.rollback()
+                                    st.error(f"Could not add to wishlist: {str(e)}")
                     else:
                         st.caption("Login to add")
     else:

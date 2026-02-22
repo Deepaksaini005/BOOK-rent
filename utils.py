@@ -1,12 +1,9 @@
 from models import Session, User, Book, Rental, Review, Wishlist, Payment
 from datetime import datetime, timedelta
-import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from io import BytesIO
-import os
 
 def get_session():
     return Session()
@@ -14,18 +11,17 @@ def get_session():
 def init_db():
     from models import engine, Base
     Base.metadata.create_all(engine)
-    # Create admin user if not exists
     session = get_session()
-    admin = session.query(User).filter_by(email='admin@bookrent.com').first()
-    if not admin:
-        admin = User(email='admin@bookrent.com', name='Admin', role='admin')
-        admin.set_password('admin123')
-        session.add(admin)
-        session.commit()
+    try:
+        admin = session.query(User).filter_by(email='admin@bookrent.com').first()
+        if not admin:
+            admin = User(email='admin@bookrent.com', name='Admin', role='admin')
+            admin.set_password('admin123')
+            session.add(admin)
+            session.commit()
 
-    # Add sample books if none exist
-    if session.query(Book).count() == 0:
-        sample_books = [
+        if session.query(Book).count() == 0:
+            sample_books = [
             # Novels
             Book(title="To Kill a Mockingbird", author="Harper Lee", genre="Novel", description="A gripping tale of racial injustice and childhood innocence.", price_per_day=3.50, stock=5, available=5, published_year=1960),
             Book(title="1984", author="George Orwell", genre="Novel", description="A dystopian social science fiction novel.", price_per_day=4.00, stock=4, available=4, published_year=1949),
@@ -62,12 +58,12 @@ def init_db():
             # Poetry
             Book(title="The Waste Land", author="T.S. Eliot", genre="Poetry", description="A modernist poem.", price_per_day=3.00, stock=4, available=4, published_year=1922),
             Book(title="Leaves of Grass", author="Walt Whitman", genre="Poetry", description="A collection of poetry.", price_per_day=3.50, stock=5, available=5, published_year=1855),
-        ]
-        for book in sample_books:
-            session.add(book)
-        session.commit()
-
-    session.close()
+            ]
+            for book in sample_books:
+                session.add(book)
+            session.commit()
+    finally:
+        session.close()
 
 def calculate_rent_amount(book, days):
     return book.price_per_day * days
@@ -137,12 +133,20 @@ def get_analytics():
 
 def create_charts():
     session = get_session()
-    # Rentals by genre
-    rentals = session.query(Rental).join(Book).all()
-    genre_counts = {}
-    for rental in rentals:
-        genre = rental.book.genre or 'Unknown'
-        genre_counts[genre] = genre_counts.get(genre, 0) + 1
-    fig = px.bar(x=list(genre_counts.keys()), y=list(genre_counts.values()), title="Rentals by Genre")
-    session.close()
-    return fig
+    try:
+        rentals = session.query(Rental).join(Book).all()
+        genre_counts = {}
+        for rental in rentals:
+            genre = rental.book.genre or "Unknown"
+            genre_counts[genre] = genre_counts.get(genre, 0) + 1
+        if not genre_counts:
+            genre_counts = {"No rentals yet": 0}
+        fig = px.bar(
+            x=list(genre_counts.keys()),
+            y=list(genre_counts.values()),
+            title="Rentals by Genre",
+            labels={"x": "Genre", "y": "Count"},
+        )
+        return fig
+    finally:
+        session.close()
